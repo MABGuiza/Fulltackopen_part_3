@@ -62,7 +62,7 @@ app.delete("/api/persons/:id", (request, response) => {
     .catch((error) => next(error));
 });
 
-app.post("/api/persons", (request, response) => {
+app.post("/api/persons", (request, response, next) => {
   const person = request.body;
   console.log(person);
 
@@ -73,18 +73,20 @@ app.post("/api/persons", (request, response) => {
     name: person.name,
     number: person.number,
   });
-  newPerson.save().then((savedPerson) => response.json(savedPerson));
+  newPerson
+    .save()
+    .then((savedPerson) => response.json(savedPerson))
+    .catch((error) => next(error));
 });
 
 app.put("/api/persons/:id", (request, response, next) => {
-  const person = request.body;
+  const { name, number } = request.body;
 
-  const updatedPerson = {
-    name: person.name,
-    number: person.number,
-  };
-
-  Person.findByIdAndUpdate(request.params.id, updatedPerson, { new: true })
+  Person.findByIdAndUpdate(
+    request.params.id,
+    { name, number },
+    { new: true, runValidators: true, context: "query" }
+  )
     .then((updated) => {
       response.json(updated);
     })
@@ -98,6 +100,7 @@ const unknownEndpoint = (request, response) => {
 app.use(unknownEndpoint);
 
 const errorHandler = (error, request, response, next) => {
+  console.log(error.name);
   console.log(error.message);
 
   if (error.name === "CastError") {

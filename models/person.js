@@ -13,9 +13,40 @@ mongoose
     console.log("error connecting to MongoDB:", error.message);
   });
 
+// const validator = (str) => {
+//   if (!str.contains("-")) {
+//     console.log("missing -");
+//     return false;
+//   }
+//   const result = str.split("-");
+//   if (!result.map((num) => typeof Number(num) === number)) {
+//     console.log("first part not a number");
+//     return false;
+//   }
+//   if (result[0].length < 2 || result[0].length > 4) {
+//     console.log("first part too short");
+//     return false;
+//   }
+//   return true;
+// };
+
 const personSchema = new mongoose.Schema({
-  name: String,
-  number: String,
+  name: { type: String, minlength: 5, required: true },
+  number: {
+    type: String,
+    validate: {
+      validator: function (str) {
+        if (!str.includes("-")) return false;
+        const result = str.split("-");
+        if (result.length > 2) return false;
+        if (!result.map((num) => typeof Number(num) === Number)) return false;
+        if (result[0].length < 2 || result[0].length > 3) return false;
+
+        return true;
+      },
+      message: (props) => `${props.value} is not a valid number`,
+    },
+  },
 });
 
 personSchema.set("toJSON", {
