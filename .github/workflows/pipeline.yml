@@ -1,0 +1,58 @@
+name: Deployment pipeline
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize]
+
+jobs:
+  simple_deployment_pipeline:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        run: npm install
+      - name: Lint
+        run: npm run eslint
+      - name: Test
+        run: npm run test
+      - name: Trigger deployment if this is a push to master
+        if: ${{ github.event_name == 'push' }}
+        run: curl https://api.render.com/deploy/srv-${{ secrets.RENDER_SERVICE_ID }}?key=${{ secrets.RENDER_API_KEY }}
+        # Using personal discord instead of the course one.
+      - name: Notify on Success
+        uses: rjstone/discord-webhook-notify@v1
+        if: success() && !contains(github.event.head_commit.message, '#skip')
+        with:
+          severity: info
+          details: |
+            Successful deployment of: ${{ github.event.commits[0].message }}
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+      - name: Notify on Failure
+        uses: rjstone/discord-webhook-notify@v1
+        if: failure() && !contains(github.event.head_commit.message, '#skip')
+        with:
+          severity: error
+          details: |
+            Build failed for commit: ${{ github.event.commits[0].message }} by ${{ github.event.head_commit.committer.name }}
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+  tag_release:
+    needs: [simple_deployment_pipeline]
+    runs-on: ubuntu-20.04
+    if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '#skip') }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: "0"
+      - name: Bump version
+        uses: anothrNick/github-tag-action@1.66.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BUMP: patch
+          WITH_V: true
