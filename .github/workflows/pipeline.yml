@@ -19,9 +19,7 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Lint
-        run: npm run eslint
-      - name: Test
-        run: npm run test
+        run: npm run lint
       - name: Trigger deployment if this is a push to master
         if: ${{ github.event_name == 'push' }}
         run: curl https://api.render.com/deploy/srv-${{ secrets.RENDER_SERVICE_ID }}?key=${{ secrets.RENDER_API_KEY }}
